@@ -273,19 +273,33 @@ const Ecosystem = () => {
   };
 
   const handleToolAction = async (tool: any) => {
+    console.log('Tool clicked:', tool.name, 'Status:', tool.status);
+    
     if (tool.isConnected) {
       if (tool.status === "Connected") {
-        toast.success(`${tool.name} is ready to use!`);
+        toast.success(`🎉 ${tool.name} is ready to use!`, {
+          description: `Click to start using ${tool.name}`,
+          duration: 4000,
+        });
       } else if (tool.status === "Disconnected" || tool.status === "Error") {
-        toast.error("Please update your OpenAI API key in Supabase secrets");
+        toast.error("API Key Required", {
+          description: "Please update your OpenAI API key in Supabase secrets",
+          duration: 5000,
+        });
       } else {
         setIsTestingAPI(true);
         await testOpenAIConnection();
       }
     } else if (tool.status === "Coming Soon") {
-      toast.info(`${tool.name} is coming soon! Stay tuned.`);
+      toast.info(`🚀 ${tool.name}`, {
+        description: "This feature is coming soon! Stay tuned for updates.",
+        duration: 4000,
+      });
     } else {
-      toast.info(`${tool.name} integration available. Click to learn more.`);
+      toast.info(`✨ ${tool.name}`, {
+        description: "This integration is available. Contact support to enable it for your account.",
+        duration: 4000,
+      });
     }
   };
 
