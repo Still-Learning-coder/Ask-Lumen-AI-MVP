@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Paperclip, Mic } from "lucide-react";
+import { Send, Paperclip, Mic, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import MessageBubble from "./MessageBubble";
 
@@ -10,12 +10,9 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-  attachment?: {
-    type: "image" | "video" | "audio" | "3d";
-    url?: string;
-    placeholder?: string;
-  };
 }
+
+const CHAT_URL = `https://jsuqipnblmjayovklhrf.supabase.co/functions/v1/chat`;
 
 const initialMessages: Message[] = [
   {
@@ -29,8 +26,9 @@ const initialMessages: Message[] = [
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -38,112 +36,157 @@ const ChatInterface = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+  }, [messages]);
 
-  const generateMockResponse = (userMessage: string): Message => {
-    const lowerMessage = userMessage.toLowerCase();
-    const id = Date.now().toString();
-    const timestamp = new Date();
+  const streamChat = async (userMessage: Message) => {
+    setIsLoading(true);
+    abortControllerRef.current = new AbortController();
 
-    // Image generation
-    if (lowerMessage.includes("image") || lowerMessage.includes("picture") || lowerMessage.includes("photo")) {
-      return {
-        id,
-        role: "assistant",
-        content: "Here's the image I generated for you based on your request:",
-        timestamp,
-        attachment: {
-          type: "image",
-          url: `https://via.placeholder.com/600x400/00B4D8/FFFFFF?text=${encodeURIComponent("AI Generated: " + userMessage.slice(0, 30))}`
+    // Create assistant message placeholder
+    const assistantMessageId = Date.now().toString();
+    let assistantContent = "";
+
+    try {
+      const response = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map(m => ({
+            role: m.role,
+            content: m.content
+          }))
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete lines
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            
+            if (content) {
+              assistantContent += content;
+              
+              // Update or create assistant message
+              setMessages(prev => {
+                const lastMessage = prev[prev.length - 1];
+                if (lastMessage?.role === "assistant" && lastMessage.id === assistantMessageId) {
+                  return prev.map(m => 
+                    m.id === assistantMessageId 
+                      ? { ...m, content: assistantContent }
+                      : m
+                  );
+                } else {
+                  return [...prev, {
+                    id: assistantMessageId,
+                    role: "assistant",
+                    content: assistantContent,
+                    timestamp: new Date(),
+                  }];
+                }
+              });
+            }
+          } catch (e) {
+            // Ignore parse errors for incomplete JSON
+            console.debug("JSON parse error (expected during streaming):", e);
+          }
         }
-      };
-    }
+      }
 
-    // Video content
-    if (lowerMessage.includes("video")) {
-      return {
-        id,
-        role: "assistant",
-        content: "I've prepared a video for you:",
-        timestamp,
-        attachment: {
-          type: "video",
-          placeholder: "🎬 Video Player Placeholder"
+      // Process any remaining buffer
+      if (buffer.trim()) {
+        const lines = buffer.split("\n");
+        for (const rawLine of lines) {
+          if (!rawLine || rawLine.startsWith(":") || !rawLine.startsWith("data: ")) continue;
+          const jsonStr = rawLine.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => prev.map(m =>
+                m.id === assistantMessageId ? { ...m, content: assistantContent } : m
+              ));
+            }
+          } catch (e) {
+            console.debug("Final buffer parse error:", e);
+          }
         }
-      };
+      }
+
+      console.log("Stream completed successfully");
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log("Stream aborted by user");
+      } else {
+        console.error("Error streaming chat:", error);
+        toast.error("Failed to get response. Please try again.");
+        
+        // Remove incomplete assistant message
+        setMessages(prev => prev.filter(m => m.id !== assistantMessageId));
+      }
+    } finally {
+      setIsLoading(false);
+      abortControllerRef.current = null;
     }
-
-    // Audio content
-    if (lowerMessage.includes("audio") || lowerMessage.includes("music") || lowerMessage.includes("sound")) {
-      return {
-        id,
-        role: "assistant",
-        content: "Here's the audio content:",
-        timestamp,
-        attachment: {
-          type: "audio",
-          placeholder: "🎵 Audio Player Placeholder"
-        }
-      };
-    }
-
-    // 3D models
-    if (lowerMessage.includes("3d") || lowerMessage.includes("model")) {
-      return {
-        id,
-        role: "assistant",
-        content: "I've created an interactive 3D model for you:",
-        timestamp,
-        attachment: {
-          type: "3d",
-          placeholder: "🎮 3D Model Viewer Placeholder"
-        }
-      };
-    }
-
-    // Default text response
-    const responses = [
-      "That's a great question! Based on my analysis, I can tell you that this is a complex topic. Let me break it down for you in detail...",
-      "Interesting! I've processed your request and here's what I found: The key aspects to consider are accuracy, efficiency, and user experience...",
-      "I understand what you're looking for. Let me provide you with a comprehensive answer that covers all the important points...",
-      "Excellent question! After analyzing the context, here's my detailed response: We should consider multiple perspectives on this...",
-    ];
-
-    return {
-      id,
-      role: "assistant",
-      content: responses[Math.floor(Math.random() * responses.length)],
-      timestamp,
-    };
   };
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
 
-    // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input,
+      content: input.trim(),
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInput("");
-    setIsTyping(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      const aiResponse = generateMockResponse(input);
-      setMessages((prev) => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 2000);
+    await streamChat(userMessage);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
   };
 
@@ -155,7 +198,7 @@ const ChatInterface = () => {
           <MessageBubble key={message.id} message={message} />
         ))}
         
-        {isTyping && (
+        {isLoading && (
           <div className="flex items-start gap-3 animate-fade-in">
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
               <span className="text-primary-foreground text-xs font-bold">AI</span>
@@ -181,7 +224,8 @@ const ChatInterface = () => {
               variant="ghost"
               size="icon"
               className="shrink-0"
-              onClick={() => toast.info("Mock: File attachment would open here")}
+              onClick={() => toast.info("File attachment coming soon!")}
+              disabled={isLoading}
             >
               <Paperclip className="h-5 w-5" />
             </Button>
@@ -194,6 +238,7 @@ const ChatInterface = () => {
                 placeholder="Ask me anything..."
                 className="resize-none min-h-[60px] max-h-[200px] pr-12"
                 rows={1}
+                disabled={isLoading}
               />
             </div>
 
@@ -201,22 +246,34 @@ const ChatInterface = () => {
               variant="ghost"
               size="icon"
               className="shrink-0"
-              onClick={() => toast.info("Mock: Voice input would activate here")}
+              onClick={() => toast.info("Voice input coming soon!")}
+              disabled={isLoading}
             >
               <Mic className="h-5 w-5" />
             </Button>
 
-            <Button
-              size="icon"
-              className="shrink-0 gradient-primary text-primary-foreground hover:opacity-90"
-              onClick={handleSend}
-              disabled={!input.trim() || isTyping}
-            >
-              <Send className="h-5 w-5" />
-            </Button>
+            {isLoading ? (
+              <Button
+                size="icon"
+                variant="destructive"
+                className="shrink-0"
+                onClick={handleStop}
+              >
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                className="shrink-0 gradient-primary text-primary-foreground hover:opacity-90"
+                onClick={handleSend}
+                disabled={!input.trim()}
+              >
+                <Send className="h-5 w-5" />
+              </Button>
+            )}
           </div>
           <p className="text-xs text-muted-foreground mt-2 text-center">
-            Press Enter to send, Shift + Enter for new line
+            {isLoading ? "AI is thinking..." : "Press Enter to send, Shift + Enter for new line"}
           </p>
         </div>
       </div>

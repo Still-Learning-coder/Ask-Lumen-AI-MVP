@@ -1,5 +1,4 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
 import type { Message } from "./ChatInterface";
 
 interface MessageBubbleProps {
@@ -34,42 +33,6 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
         >
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
         </div>
-
-        {message.attachment && (
-          <Card className="overflow-hidden w-full">
-            {message.attachment.type === "image" && message.attachment.url && (
-              <img
-                src={message.attachment.url}
-                alt="AI Generated"
-                className="w-full h-auto"
-              />
-            )}
-            {message.attachment.type === "video" && (
-              <div className="aspect-video bg-muted flex items-center justify-center p-8">
-                <div className="text-center">
-                  <p className="text-4xl mb-2">{message.attachment.placeholder}</p>
-                  <p className="text-sm text-muted-foreground">Video player would appear here</p>
-                </div>
-              </div>
-            )}
-            {message.attachment.type === "audio" && (
-              <div className="aspect-[3/1] bg-muted flex items-center justify-center p-8">
-                <div className="text-center">
-                  <p className="text-4xl mb-2">{message.attachment.placeholder}</p>
-                  <p className="text-sm text-muted-foreground">Audio player would appear here</p>
-                </div>
-              </div>
-            )}
-            {message.attachment.type === "3d" && (
-              <div className="aspect-square bg-muted flex items-center justify-center p-8">
-                <div className="text-center">
-                  <p className="text-4xl mb-2">{message.attachment.placeholder}</p>
-                  <p className="text-sm text-muted-foreground">Interactive 3D viewer would appear here</p>
-                </div>
-              </div>
-            )}
-          </Card>
-        )}
 
         <span className="text-xs text-muted-foreground px-2">
           {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
