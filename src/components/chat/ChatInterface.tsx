@@ -42,8 +42,18 @@ const ChatInterface = () => {
     setIsLoading(true);
     abortControllerRef.current = new AbortController();
 
-    // Create assistant message placeholder
+    // Create assistant message placeholder immediately
     const assistantMessageId = Date.now().toString();
+    const assistantPlaceholder: Message = {
+      id: assistantMessageId,
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+    };
+    
+    // Add placeholder to messages right away to prevent race conditions
+    setMessages(prev => [...prev, assistantPlaceholder]);
+    
     let assistantContent = "";
 
     try {
@@ -95,24 +105,12 @@ const ChatInterface = () => {
             if (content) {
               assistantContent += content;
               
-              // Update or create assistant message
-              setMessages(prev => {
-                const lastMessage = prev[prev.length - 1];
-                if (lastMessage?.role === "assistant" && lastMessage.id === assistantMessageId) {
-                  return prev.map(m => 
-                    m.id === assistantMessageId 
-                      ? { ...m, content: assistantContent }
-                      : m
-                  );
-                } else {
-                  return [...prev, {
-                    id: assistantMessageId,
-                    role: "assistant",
-                    content: assistantContent,
-                    timestamp: new Date(),
-                  }];
-                }
-              });
+              // Update the assistant message that already exists
+              setMessages(prev => prev.map(m => 
+                m.id === assistantMessageId 
+                  ? { ...m, content: assistantContent }
+                  : m
+              ));
             }
           } catch (e) {
             // Ignore parse errors for incomplete JSON
@@ -148,11 +146,13 @@ const ChatInterface = () => {
     } catch (error: any) {
       if (error.name === 'AbortError') {
         console.log("Stream aborted by user");
+        // Remove the assistant placeholder on abort
+        setMessages(prev => prev.filter(m => m.id !== assistantMessageId));
       } else {
         console.error("Error streaming chat:", error);
         toast.error("Failed to get response. Please try again.");
         
-        // Remove incomplete assistant message
+        // Remove incomplete assistant message on error
         setMessages(prev => prev.filter(m => m.id !== assistantMessageId));
       }
     } finally {
