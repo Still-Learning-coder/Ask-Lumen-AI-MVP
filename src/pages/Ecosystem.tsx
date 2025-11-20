@@ -8,23 +8,196 @@ import { Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-const getOpenAITools = (status: string) => [
-  { id: 1, name: "DALL-E 3", category: "Image", status, icon: "🎨", description: "Generate stunning images from text", isOpenAI: true },
-  { id: 2, name: "GPT-5", category: "Text", status, icon: "✍️", description: "Advanced language model", isOpenAI: true },
-  { id: 3, name: "GPT-4.1", category: "Text", status, icon: "🤖", description: "Powerful reasoning model", isOpenAI: true },
-  { id: 4, name: "Whisper", category: "Audio", status, icon: "🎙️", description: "Speech recognition system", isOpenAI: true },
+// AI-Powered Features using OpenAI (connected)
+const getConnectedFeatures = (status: string) => [
+  { 
+    id: 1, 
+    name: "AI Image Generator", 
+    category: "Image Tools", 
+    status, 
+    icon: "🎨", 
+    description: "Create stunning images from text descriptions using DALL-E",
+    aiProvider: "OpenAI DALL-E",
+    features: ["Text-to-image", "Multiple styles", "High resolution"],
+    isConnected: true,
+    actionText: "Generate Image"
+  },
+  { 
+    id: 2, 
+    name: "Code Assistant", 
+    category: "Code Tools", 
+    status, 
+    icon: "💻", 
+    description: "Get AI-powered coding help, debugging, and code generation",
+    aiProvider: "OpenAI GPT-5",
+    features: ["Code generation", "Bug fixing", "Code review"],
+    isConnected: true,
+    actionText: "Start Coding"
+  },
+  { 
+    id: 3, 
+    name: "Speech-to-Text", 
+    category: "Audio Tools", 
+    status, 
+    icon: "🎙️", 
+    description: "Transcribe audio to text with high accuracy",
+    aiProvider: "OpenAI Whisper",
+    features: ["Multi-language", "Real-time", "High accuracy"],
+    isConnected: true,
+    actionText: "Transcribe Audio"
+  },
+  { 
+    id: 4, 
+    name: "Smart Writer", 
+    category: "Text Tools", 
+    status, 
+    icon: "✍️", 
+    description: "Generate, edit, and enhance content with advanced AI",
+    aiProvider: "OpenAI GPT-5",
+    features: ["Content creation", "Editing", "Rewriting"],
+    isConnected: true,
+    actionText: "Start Writing"
+  },
 ];
 
-const mockTools = [
-  { id: 11, name: "Midjourney", category: "Image", status: "Available", icon: "🖼️", description: "Create artistic visuals", isOpenAI: false },
-  { id: 12, name: "ElevenLabs", category: "Audio", status: "Available", icon: "🎵", description: "Text-to-speech synthesis", isOpenAI: false },
-  { id: 13, name: "Stable Diffusion", category: "Image", status: "Available", icon: "🌟", description: "Open-source image generation", isOpenAI: false },
-  { id: 14, name: "Runway ML", category: "Video", status: "Available", icon: "🎬", description: "AI video editing tools", isOpenAI: false },
-  { id: 15, name: "Claude", category: "Text", status: "Available", icon: "🧠", description: "Constitutional AI assistant", isOpenAI: false },
-  { id: 16, name: "DreamFusion", category: "3D", status: "Available", icon: "🎮", description: "Text-to-3D generation", isOpenAI: false },
-  { id: 17, name: "Synthesia", category: "Video", status: "Available", icon: "📹", description: "AI video avatars", isOpenAI: false },
-  { id: 18, name: "Anthropic", category: "Text", status: "Available", icon: "💭", description: "Advanced reasoning AI", isOpenAI: false },
-  { id: 19, name: "Play.ht", category: "Audio", status: "Available", icon: "🔊", description: "Voice cloning technology", isOpenAI: false },
+// Available AI-Powered Features
+const availableFeatures = [
+  { 
+    id: 11, 
+    name: "Text Summarizer", 
+    category: "Text Tools", 
+    status: "Available", 
+    icon: "📝", 
+    description: "Condense long texts into concise summaries",
+    aiProvider: "Multiple AI Models",
+    features: ["Quick summaries", "Key points extraction", "Multiple formats"],
+    isConnected: false,
+    actionText: "Summarize Text"
+  },
+  { 
+    id: 12, 
+    name: "Universal Translator", 
+    category: "Text Tools", 
+    status: "Available", 
+    icon: "🌍", 
+    description: "Translate text between 100+ languages instantly",
+    aiProvider: "Neural Translation",
+    features: ["100+ languages", "Context-aware", "Instant translation"],
+    isConnected: false,
+    actionText: "Translate"
+  },
+  { 
+    id: 13, 
+    name: "Voice Generator", 
+    category: "Audio Tools", 
+    status: "Available", 
+    icon: "🎵", 
+    description: "Convert text to natural-sounding speech in any voice",
+    aiProvider: "ElevenLabs",
+    features: ["Natural voices", "Voice cloning", "Multi-language"],
+    isConnected: false,
+    actionText: "Generate Voice"
+  },
+  { 
+    id: 14, 
+    name: "Content Analyzer", 
+    category: "Data Tools", 
+    status: "Available", 
+    icon: "🔍", 
+    description: "Extract insights and patterns from your data",
+    aiProvider: "Advanced Analytics",
+    features: ["Sentiment analysis", "Pattern detection", "Insights extraction"],
+    isConnected: false,
+    actionText: "Analyze Data"
+  },
+  { 
+    id: 15, 
+    name: "Image Enhancer", 
+    category: "Image Tools", 
+    status: "Available", 
+    icon: "🖼️", 
+    description: "Upscale and improve image quality with AI",
+    aiProvider: "Stable Diffusion",
+    features: ["4x upscaling", "Detail enhancement", "Noise removal"],
+    isConnected: false,
+    actionText: "Enhance Image"
+  },
+  { 
+    id: 16, 
+    name: "Video Subtitle Generator", 
+    category: "Video Tools", 
+    status: "Available", 
+    icon: "📹", 
+    description: "Automatically generate accurate subtitles for videos",
+    aiProvider: "Speech Recognition",
+    features: ["Auto-generation", "Multi-language", "Time-synced"],
+    isConnected: false,
+    actionText: "Generate Subtitles"
+  },
+  { 
+    id: 17, 
+    name: "Background Remover", 
+    category: "Image Tools", 
+    status: "Available", 
+    icon: "✂️", 
+    description: "Remove backgrounds from images automatically",
+    aiProvider: "Computer Vision",
+    features: ["One-click removal", "High precision", "Batch processing"],
+    isConnected: false,
+    actionText: "Remove Background"
+  },
+  { 
+    id: 18, 
+    name: "Content Rewriter", 
+    category: "Text Tools", 
+    status: "Available", 
+    icon: "🔄", 
+    description: "Rewrite content while maintaining meaning",
+    aiProvider: "Language Models",
+    features: ["Style adjustment", "Tone control", "Plagiarism-free"],
+    isConnected: false,
+    actionText: "Rewrite Content"
+  },
+];
+
+// Coming Soon Features
+const comingSoonFeatures = [
+  { 
+    id: 21, 
+    name: "AI Video Generator", 
+    category: "Video Tools", 
+    status: "Coming Soon", 
+    icon: "🎥", 
+    description: "Create videos from text descriptions",
+    aiProvider: "Runway ML",
+    features: ["Text-to-video", "Style transfer", "Animation"],
+    isConnected: false,
+    actionText: "Learn More"
+  },
+  { 
+    id: 22, 
+    name: "3D Model Creator", 
+    category: "3D Tools", 
+    status: "Coming Soon", 
+    icon: "🎮", 
+    description: "Generate 3D models from text or images",
+    aiProvider: "DreamFusion",
+    features: ["Text-to-3D", "Image-to-3D", "Export formats"],
+    isConnected: false,
+    actionText: "Learn More"
+  },
+  { 
+    id: 23, 
+    name: "Music Composer", 
+    category: "Audio Tools", 
+    status: "Coming Soon", 
+    icon: "🎼", 
+    description: "Compose original music with AI",
+    aiProvider: "Music AI",
+    features: ["Genre selection", "Custom length", "Royalty-free"],
+    isConnected: false,
+    actionText: "Learn More"
+  },
 ];
 
 const Ecosystem = () => {
@@ -65,7 +238,7 @@ const Ecosystem = () => {
     }
   };
 
-  const categories = ["All", "Text", "Image", "Video", "Audio", "3D"];
+  const categories = ["All", "Text Tools", "Image Tools", "Code Tools", "Audio Tools", "Video Tools", "Data Tools", "3D Tools"];
 
   const getStatusForOpenAITools = () => {
     if (openAIStatus === "checking") return "Checking...";
@@ -75,8 +248,9 @@ const Ecosystem = () => {
   };
 
   const allTools = [
-    ...getOpenAITools(getStatusForOpenAITools()),
-    ...mockTools
+    ...getConnectedFeatures(getStatusForOpenAITools()),
+    ...availableFeatures,
+    ...comingSoonFeatures
   ];
 
   const filteredTools = allTools.filter((tool) => {
@@ -92,23 +266,26 @@ const Ecosystem = () => {
       case "Checking...": return "bg-yellow-500/20 text-yellow-500 border-yellow-500/50";
       case "Disconnected": return "bg-red-500/20 text-red-500 border-red-500/50";
       case "Error": return "bg-red-500/20 text-red-500 border-red-500/50";
-      case "Available": return "bg-muted text-muted-foreground";
+      case "Available": return "bg-blue-500/20 text-blue-500 border-blue-500/50";
+      case "Coming Soon": return "bg-purple-500/20 text-purple-500 border-purple-500/50";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
   const handleToolAction = async (tool: any) => {
-    if (tool.isOpenAI) {
+    if (tool.isConnected) {
       if (tool.status === "Connected") {
-        toast.success(`${tool.name} is connected and ready to use`);
+        toast.success(`${tool.name} is ready to use!`);
       } else if (tool.status === "Disconnected" || tool.status === "Error") {
         toast.error("Please update your OpenAI API key in Supabase secrets");
       } else {
         setIsTestingAPI(true);
         await testOpenAIConnection();
       }
+    } else if (tool.status === "Coming Soon") {
+      toast.info(`${tool.name} is coming soon! Stay tuned.`);
     } else {
-      toast.info(`${tool.name} integration coming soon`);
+      toast.info(`${tool.name} integration available. Click to learn more.`);
     }
   };
 
@@ -124,7 +301,7 @@ const Ecosystem = () => {
               Ecosystem Hub
             </h1>
             <p className="text-muted-foreground">
-              Connect and manage your AI tools in one place
+              Use different AI features to perform any task
             </p>
           </div>
 
@@ -133,7 +310,7 @@ const Ecosystem = () => {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search tools..."
+                placeholder="Search AI features..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -173,22 +350,34 @@ const Ecosystem = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">{tool.description}</p>
+                  <p className="text-sm text-muted-foreground mb-3">{tool.description}</p>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    <span className="font-semibold">Powered by:</span> {tool.aiProvider}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {tool.features?.map((feature: string, idx: number) => (
+                      <Badge key={idx} variant="outline" className="text-xs">
+                        {feature}
+                      </Badge>
+                    ))}
+                  </div>
                 </CardContent>
                 <CardFooter>
                   <Button
                     className="w-full"
-                    variant={tool.status === "Connected" ? "outline" : "default"}
+                    variant={tool.status === "Connected" ? "default" : tool.status === "Coming Soon" ? "outline" : "secondary"}
                     onClick={() => handleToolAction(tool)}
-                    disabled={isTestingAPI && tool.isOpenAI}
+                    disabled={(isTestingAPI && tool.isConnected) || tool.status === "Checking..."}
                   >
-                    {isTestingAPI && tool.isOpenAI ? (
+                    {isTestingAPI && tool.isConnected ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Testing...
                       </>
+                    ) : tool.status === "Checking..." ? (
+                      "Checking..."
                     ) : (
-                      tool.status === "Connected" ? "Configure" : tool.status === "Checking..." ? "Checking..." : "Connect"
+                      tool.actionText
                     )}
                   </Button>
                 </CardFooter>
@@ -198,7 +387,7 @@ const Ecosystem = () => {
 
           {filteredTools.length === 0 && (
             <div className="text-center py-16">
-              <p className="text-muted-foreground">No tools found matching your search.</p>
+              <p className="text-muted-foreground">No AI features found matching your search.</p>
             </div>
           )}
         </div>
