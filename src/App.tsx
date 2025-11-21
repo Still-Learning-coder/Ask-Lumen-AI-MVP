@@ -11,6 +11,10 @@ import Community from "./pages/Community";
 import Achievements from "./pages/Achievements";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import CodeAssistant from "./pages/features/CodeAssistant";
+import ImageGenerator from "./pages/features/ImageGenerator";
+import SpeechToText from "./pages/features/SpeechToText";
+import SmartWriter from "./pages/features/SmartWriter";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +79,38 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ecosystem/code-assistant"
+            element={
+              <ProtectedRoute>
+                <CodeAssistant />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ecosystem/image-generator"
+            element={
+              <ProtectedRoute>
+                <ImageGenerator />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ecosystem/speech-to-text"
+            element={
+              <ProtectedRoute>
+                <SpeechToText />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ecosystem/smart-writer"
+            element={
+              <ProtectedRoute>
+                <SmartWriter />
               </ProtectedRoute>
             }
           />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "@/components/layout/Sidebar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -201,6 +202,7 @@ const comingSoonFeatures = [
 ];
 
 const Ecosystem = () => {
+  const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -277,10 +279,21 @@ const Ecosystem = () => {
     
     if (tool.isConnected) {
       if (tool.status === "Connected") {
-        toast.success(`🎉 ${tool.name} is ready to use!`, {
-          description: `Click to start using ${tool.name}`,
-          duration: 4000,
-        });
+        // Navigate to feature pages for connected tools
+        if (tool.name === "Code Assistant") {
+          navigate("/ecosystem/code-assistant");
+        } else if (tool.name === "Image Generator") {
+          navigate("/ecosystem/image-generator");
+        } else if (tool.name === "Speech-to-Text") {
+          navigate("/ecosystem/speech-to-text");
+        } else if (tool.name === "Smart Writer") {
+          navigate("/ecosystem/smart-writer");
+        } else {
+          toast.success(`🎉 ${tool.name} is ready to use!`, {
+            description: `Feature page coming soon`,
+            duration: 4000,
+          });
+        }
       } else if (tool.status === "Disconnected" || tool.status === "Error") {
         toast.error("API Key Required", {
           description: "Please update your OpenAI API key in Supabase secrets",
