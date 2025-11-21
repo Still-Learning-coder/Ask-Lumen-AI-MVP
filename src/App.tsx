@@ -15,6 +15,7 @@ import CodeAssistant from "./pages/features/CodeAssistant";
 import ImageGenerator from "./pages/features/ImageGenerator";
 import SpeechToText from "./pages/features/SpeechToText";
 import SmartWriter from "./pages/features/SmartWriter";
+import ThreeDModels from "./pages/features/ThreeDModels";
 
 const queryClient = new QueryClient();
 
@@ -111,6 +112,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <SmartWriter />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ecosystem/3d-models"
+            element={
+              <ProtectedRoute>
+                <ThreeDModels />
               </ProtectedRoute>
             }
           />
