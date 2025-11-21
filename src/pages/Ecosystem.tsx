@@ -59,6 +59,18 @@ const getConnectedFeatures = (status: string) => [
     isConnected: true,
     actionText: "Start Writing"
   },
+  { 
+    id: 5, 
+    name: "3D Model Viewer", 
+    category: "3D Tools", 
+    status: "Connected", 
+    icon: "🎮", 
+    description: "Browse and explore educational 3D models from Sketchfab",
+    aiProvider: "Sketchfab API",
+    features: ["Search models", "Interactive viewer", "Educational content"],
+    isConnected: true,
+    actionText: "Explore 3D Models"
+  },
 ];
 
 // Available AI-Powered Features
@@ -282,12 +294,14 @@ const Ecosystem = () => {
         // Navigate to feature pages for connected tools
         if (tool.name === "Code Assistant") {
           navigate("/ecosystem/code-assistant");
-        } else if (tool.name === "Image Generator") {
+        } else if (tool.name === "AI Image Generator") {
           navigate("/ecosystem/image-generator");
         } else if (tool.name === "Speech-to-Text") {
           navigate("/ecosystem/speech-to-text");
         } else if (tool.name === "Smart Writer") {
           navigate("/ecosystem/smart-writer");
+        } else if (tool.name === "3D Model Viewer") {
+          navigate("/ecosystem/3d-models");
         } else {
           toast.success(`🎉 ${tool.name} is ready to use!`, {
             description: `Feature page coming soon`,
