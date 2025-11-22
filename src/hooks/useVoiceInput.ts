@@ -12,10 +12,7 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
   
   const wsRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
 
   const connect = useCallback(async () => {
     try {
@@ -35,15 +32,8 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
       // Store stream for cleanup
       streamRef.current = stream;
 
-      // Create audio context for processing
-      audioContextRef.current = new AudioContext({ sampleRate: 16000 });
-      const source = audioContextRef.current.createMediaStreamSource(stream);
-      sourceRef.current = source;
-      processorRef.current = audioContextRef.current.createScriptProcessor(4096, 1, 1);
-
       // Connect to WebSocket
-      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-      const wsUrl = `${SUPABASE_URL.replace('https://', 'wss://')}/functions/v1/voice-input`;
+      const wsUrl = `wss://jsuqipnblmjayovklhrf.supabase.co/functions/v1/voice-input`;
       
       wsRef.current = new WebSocket(wsUrl);
 
@@ -110,39 +100,35 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
         // Don't call disconnect() here to avoid recursive cleanup
       };
 
-      // Process and send audio data
-      processorRef.current.onaudioprocess = (e) => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          const inputData = e.inputBuffer.getChannelData(0);
-          
-          // Convert Float32Array to Int16Array for AssemblyAI
-          const int16Array = new Int16Array(inputData.length);
-          for (let i = 0; i < inputData.length; i++) {
-            const s = Math.max(-1, Math.min(1, inputData[i]));
-            int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-          }
-          
-          // Convert to base64
-          const uint8Array = new Uint8Array(int16Array.buffer);
-          let binary = '';
-          const chunkSize = 0x8000;
-          
-          for (let i = 0; i < uint8Array.length; i += chunkSize) {
-            const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
-            binary += String.fromCharCode.apply(null, Array.from(chunk));
-          }
-          
-          const base64Audio = btoa(binary);
-          
-          wsRef.current.send(JSON.stringify({
-            type: 'audio',
-            audio: base64Audio
-          }));
+      // Create MediaRecorder with WebM/Opus format
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: 16000
+      });
+
+      mediaRecorderRef.current = mediaRecorder;
+
+      // Handle audio data chunks
+      mediaRecorder.ondataavailable = async (event) => {
+        if (event.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64Audio = (reader.result as string)?.split(',')[1];
+            if (base64Audio) {
+              console.log(`Sending audio chunk: ${base64Audio.length} bytes`);
+              wsRef.current?.send(JSON.stringify({
+                type: 'audio',
+                audio: base64Audio
+              }));
+            }
+          };
+          reader.readAsDataURL(event.data);
         }
       };
 
-      source.connect(processorRef.current);
-      // Don't connect to destination - this creates audio feedback loop!
+      // Start recording with 250ms chunks
+      mediaRecorder.start(250);
+      console.log('MediaRecorder started');
 
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -164,6 +150,12 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
       wsRef.current.send(JSON.stringify({ type: 'terminate' }));
     }
 
+    // Stop MediaRecorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
+
     // Stop all media tracks
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
@@ -171,23 +163,6 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
         track.stop();
       });
       streamRef.current = null;
-    }
-
-    // Disconnect source
-    if (sourceRef.current) {
-      sourceRef.current.disconnect();
-      sourceRef.current = null;
-    }
-
-    // Clean up audio processing
-    if (processorRef.current) {
-      processorRef.current.disconnect();
-      processorRef.current = null;
-    }
-    
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
     }
 
     // Close WebSocket
