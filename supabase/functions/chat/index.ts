@@ -31,7 +31,14 @@ serve(async (req) => {
 
     // Check if the last user message is requesting image generation
     const lastUserMessage = messages[messages.length - 1];
-    const imageKeywords = ['generate image', 'create image', 'draw', 'make an image', 'generate a picture', 'create a picture'];
+    const imageKeywords = [
+      'generate image', 'create image', 'generate a image', 'create a image',
+      'draw', 'draw me', 'draw a',
+      'make an image', 'make a picture', 'make me a picture',
+      'generate a picture', 'create a picture',
+      'show me a picture', 'show me an image',
+      'i want to see', 'can you show'
+    ];
     const isImageRequest = lastUserMessage?.role === 'user' && 
       imageKeywords.some(keyword => lastUserMessage.content.toLowerCase().includes(keyword));
 
@@ -72,8 +79,18 @@ serve(async (req) => {
           }
         );
       } else {
-        console.error('Image generation failed:', await imageResponse.text());
-        // Fall through to regular chat if image generation fails
+        const error = await imageResponse.text();
+        console.error('Image generation failed:', error);
+        
+        // Return an error message to the user
+        return new Response(
+          JSON.stringify({ 
+            content: `I apologize, but I'm having trouble generating that image right now. Please try again. Error: ${error}`,
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
       }
     }
 
@@ -88,7 +105,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are Lumen AI, an intelligent and helpful AI assistant. You can help with a wide range of tasks including answering questions, generating content, analyzing information, and providing creative solutions. Be concise, accurate, and friendly in your responses. When users want to generate images, tell them to use phrases like 'generate image' or 'create image' followed by their description.",
+            content: "You are Lumen AI, an intelligent and helpful AI assistant with image generation capabilities. You can help with a wide range of tasks including answering questions, generating content, analyzing information, and providing creative solutions. Be concise, accurate, and friendly in your responses.",
           },
           ...messages,
         ],

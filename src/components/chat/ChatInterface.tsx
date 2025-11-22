@@ -28,6 +28,7 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -43,8 +44,26 @@ const ChatInterface = () => {
     setIsLoading(true);
     abortControllerRef.current = new AbortController();
 
+    // Check if this is an image generation request
+    const imageKeywords = [
+      'generate image', 'create image', 'generate a image', 'create a image',
+      'draw', 'draw me', 'draw a',
+      'make an image', 'make a picture', 'make me a picture',
+      'generate a picture', 'create a picture',
+      'show me a picture', 'show me an image',
+      'i want to see', 'can you show'
+    ];
+    
+    const containsImageRequest = imageKeywords.some(keyword => 
+      userMessage.content.toLowerCase().includes(keyword)
+    );
+    
+    if (containsImageRequest) {
+      setIsGeneratingImage(true);
+    }
+
     // Create assistant message placeholder immediately
-    const assistantMessageId = Date.now().toString();
+    const assistantMessageId = `${Date.now()}-${Math.random()}`;
     const assistantPlaceholder: Message = {
       id: assistantMessageId,
       role: "assistant",
@@ -178,6 +197,7 @@ const ChatInterface = () => {
       }
     } finally {
       setIsLoading(false);
+      setIsGeneratingImage(false);
       abortControllerRef.current = null;
     }
   };
@@ -186,7 +206,7 @@ const ChatInterface = () => {
     if (!input.trim() || isLoading) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random()}`,
       role: "user",
       content: input.trim(),
       timestamp: new Date(),
@@ -294,7 +314,7 @@ const ChatInterface = () => {
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-2 text-center">
-            {isLoading ? "AI is thinking..." : "Press Enter to send, Shift + Enter for new line"}
+            {isGeneratingImage ? "Generating your image..." : isLoading ? "AI is thinking..." : "Press Enter to send, Shift + Enter for new line"}
           </p>
         </div>
       </div>
