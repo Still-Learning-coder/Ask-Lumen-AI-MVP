@@ -148,7 +148,7 @@ serve(async (req) => {
         // Return a combined response with text and image
         return new Response(
           JSON.stringify({ 
-            content: `I've generated an image based on your request: "${imagePrompt}"`,
+            content: "Here's your generated image!",
             imageUrl: imageData.imageUrl 
           }),
           { 
