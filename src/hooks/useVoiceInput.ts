@@ -14,6 +14,8 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
 
   const connect = useCallback(async () => {
     try {
@@ -30,9 +32,13 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
         } 
       });
 
+      // Store stream for cleanup
+      streamRef.current = stream;
+
       // Create audio context for processing
       audioContextRef.current = new AudioContext({ sampleRate: 16000 });
       const source = audioContextRef.current.createMediaStreamSource(stream);
+      sourceRef.current = source;
       processorRef.current = audioContextRef.current.createScriptProcessor(4096, 1, 1);
 
       // Connect to WebSocket
@@ -42,18 +48,38 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('Connected to voice input service');
+        console.log('WebSocket connected to voice input service');
         setIsConnecting(false);
         setIsRecording(true);
       };
 
+      // Add connection timeout
+      const connectionTimeout = setTimeout(() => {
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+          console.error('WebSocket connection timeout');
+          onError?.('Connection timeout');
+          toast({
+            title: "Connection Timeout",
+            description: "Failed to connect to voice service. Please try again.",
+            variant: "destructive",
+          });
+          disconnect();
+        }
+      }, 10000);
+
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log('WebSocket message received:', data.type);
           
-          if (data.type === 'partial' || data.type === 'final') {
+          if (data.type === 'connected') {
+            console.log('AssemblyAI connection confirmed');
+            clearTimeout(connectionTimeout);
+          } else if (data.type === 'partial' || data.type === 'final') {
+            console.log('Transcript:', data.type, data.text);
             onTranscript(data.text, data.type === 'final');
           } else if (data.type === 'error') {
+            console.error('Transcription error:', data.message);
             onError?.(data.message);
             toast({
               title: "Error",
@@ -79,7 +105,9 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
 
       wsRef.current.onclose = () => {
         console.log('WebSocket closed');
-        disconnect();
+        setIsRecording(false);
+        setIsConnecting(false);
+        // Don't call disconnect() here to avoid recursive cleanup
       };
 
       // Process and send audio data
@@ -114,7 +142,7 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
       };
 
       source.connect(processorRef.current);
-      processorRef.current.connect(audioContextRef.current.destination);
+      // Don't connect to destination - this creates audio feedback loop!
 
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -129,9 +157,26 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
   }, [onTranscript, onError]);
 
   const disconnect = useCallback(() => {
+    console.log('Disconnecting voice input...');
+    
     // Send terminate signal
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'terminate' }));
+    }
+
+    // Stop all media tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind);
+        track.stop();
+      });
+      streamRef.current = null;
+    }
+
+    // Disconnect source
+    if (sourceRef.current) {
+      sourceRef.current.disconnect();
+      sourceRef.current = null;
     }
 
     // Clean up audio processing
@@ -153,6 +198,7 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
 
     setIsRecording(false);
     setIsConnecting(false);
+    console.log('Voice input disconnected');
   }, []);
 
   const toggleRecording = useCallback(() => {
