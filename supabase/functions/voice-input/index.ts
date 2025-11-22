@@ -59,7 +59,14 @@ serve(async (req) => {
       assemblyWs.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('AssemblyAI message type:', data.message_type);
+          console.log('AssemblyAI full message:', JSON.stringify(data));
+          
+          // Check for errors first
+          if (data.error) {
+            console.error('AssemblyAI error:', data.error);
+            socket.send(JSON.stringify({ type: 'error', message: data.error }));
+            return;
+          }
           
           // Forward transcription to client
           if (data.message_type === 'PartialTranscript' || data.message_type === 'FinalTranscript') {
