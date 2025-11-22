@@ -68,15 +68,16 @@ serve(async (req) => {
             return;
           }
           
-          // Forward transcription to client
-          if (data.message_type === 'PartialTranscript' || data.message_type === 'FinalTranscript') {
-            const transcript = data.text || '';
-            if (transcript.trim()) {
-              console.log(`Transcript (${data.message_type}):`, transcript);
+          // Forward transcription to client (v3 API format)
+          if (data.type === 'Turn') {
+            // Use 'utterance' for formatted text, fallback to 'transcript'
+            const text = data.utterance || data.transcript || '';
+            if (text.trim()) {
+              console.log(`Transcript (${data.end_of_turn ? 'final' : 'partial'}):`, text);
               socket.send(JSON.stringify({
-                type: data.message_type === 'FinalTranscript' ? 'final' : 'partial',
-                text: transcript,
-                confidence: data.confidence
+                type: data.end_of_turn ? 'final' : 'partial',
+                text: text,
+                confidence: data.end_of_turn_confidence
               }));
             }
           }
