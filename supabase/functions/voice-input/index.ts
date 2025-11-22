@@ -34,7 +34,7 @@ serve(async (req) => {
     
     try {
       // Create WebSocket connection to AssemblyAI with opus encoding
-      const url = `wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000&encoding=opus&token=${ASSEMBLYAI_API_KEY}`;
+      const url = `wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000&encoding=opus&auth_key=${ASSEMBLYAI_API_KEY}`;
       assemblyWs = new WebSocket(url);
 
       // Set connection timeout
