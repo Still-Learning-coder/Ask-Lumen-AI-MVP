@@ -18,38 +18,45 @@ serve(async (req) => {
       throw new Error('Prompt is required');
     }
 
-    const reveApiKey = Deno.env.get('REVE_API_KEY');
-    if (!reveApiKey) {
-      throw new Error('REVE_API_KEY is not configured');
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!lovableApiKey) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log('Generating image with Reve API, prompt:', prompt);
+    console.log('Generating image with Lovable AI, prompt:', prompt);
 
-    const response = await fetch('https://api.reve.com/v1/image/create', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${reveApiKey}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        prompt: prompt,
+        model: 'google/gemini-2.5-flash-image-preview',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        modalities: ['image', 'text']
       }),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('Reve API error:', error);
-      throw new Error(`Reve API error: ${error}`);
+      console.error('Lovable AI error:', error);
+      throw new Error(`Lovable AI error: ${error}`);
     }
 
     const data = await response.json();
-    const imageUrl = data.imageUrl || data.url || data.data?.url;
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
     if (!imageUrl) {
       throw new Error('No image URL in response');
     }
 
-    console.log('Image generated successfully with Reve API');
+    console.log('Image generated successfully with Lovable AI');
 
     return new Response(
       JSON.stringify({ imageUrl }),
