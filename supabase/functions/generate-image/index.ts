@@ -18,42 +18,38 @@ serve(async (req) => {
       throw new Error('Prompt is required');
     }
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OPENAI_API_KEY is not configured');
+    const reveApiKey = Deno.env.get('REVE_API_KEY');
+    if (!reveApiKey) {
+      throw new Error('REVE_API_KEY is not configured');
     }
 
-    console.log('Generating image with prompt:', prompt);
+    console.log('Generating image with Reve API, prompt:', prompt);
 
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
+    const response = await fetch('https://api.reve.com/v1/image/create', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${reveApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-image-1',
         prompt: prompt,
-        n: 1,
-        size: '1024x1024',
-        response_format: 'url',
       }),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('OpenAI API error:', error);
-      throw new Error(`OpenAI API error: ${error}`);
+      console.error('Reve API error:', error);
+      throw new Error(`Reve API error: ${error}`);
     }
 
     const data = await response.json();
-    const imageUrl = data.data?.[0]?.url;
+    const imageUrl = data.imageUrl || data.url || data.data?.url;
 
     if (!imageUrl) {
       throw new Error('No image URL in response');
     }
 
-    console.log('Image generated successfully');
+    console.log('Image generated successfully with Reve API');
 
     return new Response(
       JSON.stringify({ imageUrl }),

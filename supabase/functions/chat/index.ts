@@ -29,6 +29,54 @@ serve(async (req) => {
 
     console.log("Starting chat request with", messages.length, "messages");
 
+    // Check if the last user message is requesting image generation
+    const lastUserMessage = messages[messages.length - 1];
+    const imageKeywords = ['generate image', 'create image', 'draw', 'make an image', 'generate a picture', 'create a picture'];
+    const isImageRequest = lastUserMessage?.role === 'user' && 
+      imageKeywords.some(keyword => lastUserMessage.content.toLowerCase().includes(keyword));
+
+    if (isImageRequest) {
+      console.log('Image generation request detected');
+      
+      // Extract the prompt by removing the command keywords
+      let imagePrompt = lastUserMessage.content;
+      imageKeywords.forEach(keyword => {
+        imagePrompt = imagePrompt.replace(new RegExp(keyword, 'gi'), '');
+      });
+      imagePrompt = imagePrompt.trim();
+
+      if (!imagePrompt) {
+        imagePrompt = lastUserMessage.content; // Use full content if extraction fails
+      }
+
+      // Call the generate-image function
+      const imageResponse = await fetch(`https://jsuqipnblmjayovklhrf.supabase.co/functions/v1/generate-image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: imagePrompt }),
+      });
+
+      if (imageResponse.ok) {
+        const imageData = await imageResponse.json();
+        
+        // Return a combined response with text and image
+        return new Response(
+          JSON.stringify({ 
+            content: `I've generated an image based on your request: "${imagePrompt}"`,
+            imageUrl: imageData.imageUrl 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      } else {
+        console.error('Image generation failed:', await imageResponse.text());
+        // Fall through to regular chat if image generation fails
+      }
+    }
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -40,7 +88,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are Lumen AI, an intelligent and helpful AI assistant. You can help with a wide range of tasks including answering questions, generating content, analyzing information, and providing creative solutions. Be concise, accurate, and friendly in your responses.",
+            content: "You are Lumen AI, an intelligent and helpful AI assistant. You can help with a wide range of tasks including answering questions, generating content, analyzing information, and providing creative solutions. Be concise, accurate, and friendly in your responses. When users want to generate images, tell them to use phrases like 'generate image' or 'create image' followed by their description.",
           },
           ...messages,
         ],

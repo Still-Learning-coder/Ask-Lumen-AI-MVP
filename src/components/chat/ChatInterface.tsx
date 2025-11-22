@@ -10,6 +10,7 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  imageUrl?: string;
 }
 
 const CHAT_URL = `https://jsuqipnblmjayovklhrf.supabase.co/functions/v1/chat`;
@@ -73,6 +74,26 @@ const ChatInterface = () => {
 
       if (!response.ok || !response.body) {
         throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Check if response is JSON (image generation response)
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
+        const data = await response.json();
+        
+        // Update the assistant message with text and image
+        setMessages(prev => prev.map(m =>
+          m.id === assistantMessageId 
+            ? { 
+                ...m, 
+                content: data.content || "Image generated successfully!", 
+                imageUrl: data.imageUrl 
+              }
+            : m
+        ));
+        
+        setIsLoading(false);
+        return;
       }
 
       const reader = response.body.getReader();
