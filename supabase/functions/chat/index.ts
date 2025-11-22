@@ -39,11 +39,19 @@ serve(async (req) => {
       'show me a picture', 'show me an image',
       'i want to see', 'can you show'
     ];
+    
+    console.log('Last user message:', lastUserMessage?.content);
     const isImageRequest = lastUserMessage?.role === 'user' && 
-      imageKeywords.some(keyword => lastUserMessage.content.toLowerCase().includes(keyword));
+      imageKeywords.some(keyword => {
+        const matches = lastUserMessage.content.toLowerCase().includes(keyword);
+        if (matches) console.log(`Matched keyword: "${keyword}"`);
+        return matches;
+      });
+
+    console.log('Is image request:', isImageRequest);
 
     if (isImageRequest) {
-      console.log('Image generation request detected');
+      console.log('Image generation request detected - calling generate-image function');
       
       // Extract the prompt by removing the command keywords
       let imagePrompt = lastUserMessage.content;
