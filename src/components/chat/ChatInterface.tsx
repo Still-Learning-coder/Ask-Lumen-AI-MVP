@@ -15,14 +15,7 @@ export interface Message {
 
 const CHAT_URL = `https://jsuqipnblmjayovklhrf.supabase.co/functions/v1/chat`;
 
-const initialMessages: Message[] = [
-  {
-    id: "1",
-    role: "assistant",
-    content: "Hello! I'm Lumen AI, your intelligent assistant. I can help you with images, 3D models, videos, research, and much more. What would you like to explore today?",
-    timestamp: new Date(Date.now() - 10000),
-  },
-];
+const initialMessages: Message[] = [];
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);

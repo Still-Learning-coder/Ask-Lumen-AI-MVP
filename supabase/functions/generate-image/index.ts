@@ -50,10 +50,18 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    console.log('Lovable AI response structure:', JSON.stringify(data, null, 2));
+    
+    // Try multiple possible paths for the image URL
+    const imageUrl = 
+      data.choices?.[0]?.message?.images?.[0]?.image_url?.url ||
+      data.choices?.[0]?.message?.content?.images?.[0]?.url ||
+      data.data?.[0]?.url ||
+      data.url;
 
     if (!imageUrl) {
-      throw new Error('No image URL in response');
+      console.error('Could not find image URL in response. Full response:', JSON.stringify(data));
+      throw new Error('No image URL in response. The AI may not have generated an image.');
     }
 
     console.log('Image generated successfully with Lovable AI');
