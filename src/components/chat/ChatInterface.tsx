@@ -34,16 +34,16 @@ const ChatInterface = () => {
 
   const { isRecording, isConnecting, toggleRecording } = useVoiceInput({
     onTranscript: (text, isFinal) => {
-      if (isFinal) {
-        setInput(prev => prev + (prev ? ' ' : '') + text);
-      } else {
-        // Show partial transcription in real-time
-        setInput(prev => {
-          const lastSpace = prev.lastIndexOf(' ');
-          const base = lastSpace > 0 ? prev.substring(0, lastSpace + 1) : '';
-          return base + text;
-        });
-      }
+      // Always append new text for real-time display
+      setInput(prev => {
+        // If final, append with space. If partial, replace the last partial segment
+        if (isFinal) {
+          return prev + (prev ? ' ' : '') + text;
+        } else {
+          // For partial, just replace the entire input with the partial text
+          return text;
+        }
+      });
     },
     onError: (error) => {
       console.error('Voice input error:', error);
