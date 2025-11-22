@@ -70,8 +70,8 @@ serve(async (req) => {
           
           // Forward transcription to client (v3 API format)
           if (data.type === 'Turn') {
-            // Use 'utterance' for formatted text, fallback to 'transcript'
-            const text = data.utterance || data.transcript || '';
+            // Only send formatted utterance, not raw transcript (prevents duplicates)
+            const text = data.utterance || '';
             if (text.trim()) {
               console.log(`Transcript (${data.end_of_turn ? 'final' : 'partial'}):`, text);
               socket.send(JSON.stringify({
