@@ -62,18 +62,7 @@ const ChatInterface = () => {
       setIsGeneratingImage(true);
     }
 
-    // Create assistant message placeholder immediately
     const assistantMessageId = `${Date.now()}-${Math.random()}`;
-    const assistantPlaceholder: Message = {
-      id: assistantMessageId,
-      role: "assistant",
-      content: "",
-      timestamp: new Date(),
-    };
-    
-    // Add placeholder to messages right away to prevent race conditions
-    setMessages(prev => [...prev, assistantPlaceholder]);
-    
     let assistantContent = "";
 
     try {
@@ -100,20 +89,28 @@ const ChatInterface = () => {
       if (contentType?.includes("application/json")) {
         const data = await response.json();
         
-        // Update the assistant message with text and image
-        setMessages(prev => prev.map(m =>
-          m.id === assistantMessageId 
-            ? { 
-                ...m, 
-                content: data.content || "Image generated successfully!", 
-                imageUrl: data.imageUrl 
-              }
-            : m
-        ));
+        // Add assistant message with text and image
+        setMessages(prev => [...prev, {
+          id: assistantMessageId,
+          role: "assistant",
+          content: data.content || "Here's your generated image!",
+          imageUrl: data.imageUrl,
+          timestamp: new Date(),
+        }]);
         
         setIsLoading(false);
+        setIsGeneratingImage(false);
         return;
       }
+
+      // For streaming responses, add placeholder now
+      const assistantPlaceholder: Message = {
+        id: assistantMessageId,
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantPlaceholder]);
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
