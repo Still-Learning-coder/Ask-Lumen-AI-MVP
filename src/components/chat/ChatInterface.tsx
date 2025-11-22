@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Paperclip, Mic, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 import MessageBubble from "./MessageBubble";
+import StarterSuggestions from "./StarterSuggestions";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Message {
@@ -24,13 +26,49 @@ const ChatInterface = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Load or create conversation on mount
   useEffect(() => {
-    initializeConversation();
-  }, []);
+    const convId = searchParams.get('conversation');
+    
+    if (convId) {
+      loadConversation(convId);
+    } else {
+      initializeConversation();
+    }
+  }, [searchParams]);
+
+  const loadConversation = async (id: string) => {
+    try {
+      setConversationId(id);
+      
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', id)
+        .order('created_at', { ascending: true });
+        
+      if (error) throw error;
+      
+      if (data) {
+        setMessages(data.map(msg => ({
+          id: msg.id,
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+          imageUrl: msg.image_url || undefined,
+          timestamp: new Date(msg.created_at)
+        })));
+      }
+      
+      console.log('Loaded conversation:', id, 'with', data?.length || 0, 'messages');
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+      toast.error('Failed to load conversation');
+    }
+  };
 
   const initializeConversation = async () => {
     try {
@@ -48,6 +86,7 @@ const ChatInterface = () => {
       if (error) throw error;
       
       setConversationId(data.id);
+      setSearchParams({ conversation: data.id });
       console.log('Created new conversation:', data.id);
     } catch (error) {
       console.error('Error initializing conversation:', error);
@@ -90,7 +129,7 @@ const ChatInterface = () => {
     scrollToBottom();
   }, [messages]);
 
-  const streamChat = async (userMessage: Message) => {
+  const streamChat = async (userMessage: Message, isFirstMessage = false) => {
     setIsLoading(true);
     abortControllerRef.current = new AbortController();
 
@@ -125,7 +164,9 @@ const ChatInterface = () => {
           messages: [...messages, userMessage].map(m => ({
             role: m.role,
             content: m.content
-          }))
+          })),
+          conversationId,
+          isFirstMessage
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -265,6 +306,7 @@ const ChatInterface = () => {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
+    const isFirstMsg = messages.length === 0;
     const userMessage: Message = {
       id: `${Date.now()}-${Math.random()}`,
       role: "user",
@@ -276,7 +318,7 @@ const ChatInterface = () => {
     await saveMessage(userMessage);
     setInput("");
 
-    await streamChat(userMessage);
+    await streamChat(userMessage, isFirstMsg);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -295,27 +337,37 @@ const ChatInterface = () => {
   return (
     <div className="flex-1 flex flex-col h-screen">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
-        ))}
-        
-        {isLoading && (
-          <div className="flex items-start gap-3 animate-fade-in">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-              <span className="text-primary-foreground text-xs font-bold">AI</span>
-            </div>
-            <div className="bg-muted rounded-2xl p-4 max-w-[70%]">
-              <div className="typing-indicator flex gap-1">
-                <span className="w-2 h-2 bg-foreground/50 rounded-full"></span>
-                <span className="w-2 h-2 bg-foreground/50 rounded-full"></span>
-                <span className="w-2 h-2 bg-foreground/50 rounded-full"></span>
+      <div className="flex-1 overflow-y-auto">
+        {messages.length === 0 ? (
+          <StarterSuggestions 
+            onSelect={(prompt) => {
+              setInput(prompt);
+            }} 
+          />
+        ) : (
+          <div className="p-6 space-y-6">
+            {messages.map((message) => (
+              <MessageBubble key={message.id} message={message} />
+            ))}
+            
+            {isLoading && (
+              <div className="flex items-start gap-3 animate-fade-in">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+                  <span className="text-primary-foreground text-xs font-bold">AI</span>
+                </div>
+                <div className="bg-muted rounded-2xl p-4 max-w-[70%]">
+                  <div className="typing-indicator flex gap-1">
+                    <span className="w-2 h-2 bg-foreground/50 rounded-full"></span>
+                    <span className="w-2 h-2 bg-foreground/50 rounded-full"></span>
+                    <span className="w-2 h-2 bg-foreground/50 rounded-full"></span>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+            
+            <div ref={messagesEndRef} />
           </div>
         )}
-        
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}

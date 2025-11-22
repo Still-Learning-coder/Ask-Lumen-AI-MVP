@@ -1,19 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink } from "@/components/NavLink";
+import { useNavigate } from "react-router-dom";
 import { MessageSquare, Globe, Users, Trophy, Settings, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { formatDistanceToNow } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import lumenLogo from "@/assets/lumen-logo.jpg";
-
-const mockChatHistory = [
-  { id: 1, title: "Exploring AI Images", timestamp: "2h ago" },
-  { id: 2, title: "3D Model Generation", timestamp: "1d ago" },
-  { id: 3, title: "Research Assistant", timestamp: "2d ago" },
-  { id: 4, title: "Video Creation Help", timestamp: "3d ago" },
-  { id: 5, title: "Code Review Session", timestamp: "1w ago" },
-];
 
 const navigationItems = [
   { name: "AI Assistant", path: "/dashboard", icon: MessageSquare },
@@ -29,6 +24,53 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
+  const navigate = useNavigate();
+  const [conversations, setConversations] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadConversations();
+    
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('conversations_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'conversations'
+      }, () => {
+        loadConversations();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(10);
+        
+      if (error) throw error;
+      setConversations(data || []);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
+  };
+
+  const handleConversationClick = (conversationId: string) => {
+    navigate(`/dashboard?conversation=${conversationId}`);
+  };
+
+  const handleNewChat = () => {
+    navigate('/dashboard');
+    window.location.reload();
+  };
+
   return (
     <aside
       className={`${
@@ -58,6 +100,7 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
       {/* New Chat Button */}
       <div className="px-3 mb-4">
         <Button
+          onClick={handleNewChat}
           className="w-full gradient-primary text-primary-foreground hover:opacity-90 transition-opacity"
           size={collapsed ? "icon" : "default"}
         >
@@ -91,15 +134,24 @@ const Sidebar = ({ collapsed, onToggle }: SidebarProps) => {
         <ScrollArea className="flex-1 px-2 mt-4">
           <div className="space-y-1">
             <p className="px-3 text-xs font-semibold text-muted-foreground mb-2">Recent Chats</p>
-            {mockChatHistory.map((chat) => (
-              <button
-                key={chat.id}
-                className="w-full text-left px-3 py-2 rounded-lg hover:bg-sidebar-accent transition-colors group"
-              >
-                <p className="text-sm font-medium text-sidebar-foreground truncate">{chat.title}</p>
-                <p className="text-xs text-muted-foreground">{chat.timestamp}</p>
-              </button>
-            ))}
+            {conversations.length === 0 ? (
+              <p className="px-3 text-xs text-muted-foreground italic">No conversations yet</p>
+            ) : (
+              conversations.map((chat) => (
+                <button
+                  key={chat.id}
+                  onClick={() => handleConversationClick(chat.id)}
+                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-sidebar-accent transition-colors group"
+                >
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">
+                    {chat.title || 'New Chat'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(chat.updated_at), { addSuffix: true })}
+                  </p>
+                </button>
+              ))
+            )}
           </div>
         </ScrollArea>
       )}
