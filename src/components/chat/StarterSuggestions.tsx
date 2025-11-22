@@ -8,25 +8,25 @@ const StarterSuggestions = ({ onSelect }: StarterSuggestionsProps) => {
   const suggestions = [
     {
       title: "Generate an image",
-      prompt: "Generate an image of a futuristic cityscape at sunset with flying cars",
+      prompt: "Generate an image of ",
       icon: Palette,
       gradient: "from-purple-500 to-pink-500"
     },
     {
       title: "Help me code",
-      prompt: "Help me understand React hooks and when to use useState vs useEffect",
+      prompt: "Help me with ",
       icon: Code,
       gradient: "from-blue-500 to-cyan-500"
     },
     {
       title: "Explain concepts",
-      prompt: "Explain quantum computing in simple terms with real-world analogies",
+      prompt: "Explain ",
       icon: Lightbulb,
       gradient: "from-amber-500 to-orange-500"
     },
     {
       title: "Creative writing",
-      prompt: "Write a short story about AI and humanity coexisting in 2050",
+      prompt: "Write a story about ",
       icon: Sparkles,
       gradient: "from-emerald-500 to-teal-500"
     }
