@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Paperclip, Mic, Loader2, Plus } from "lucide-react";
+import { Send, Paperclip, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import MessageBubble from "./MessageBubble";
 import StarterSuggestions from "./StarterSuggestions";
 import { supabase } from "@/integrations/supabase/client";
+import { VoiceInputButton } from "./VoiceInputButton";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 
 export interface Message {
   id: string;
@@ -29,6 +31,24 @@ const ChatInterface = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const { isRecording, isConnecting, toggleRecording } = useVoiceInput({
+    onTranscript: (text, isFinal) => {
+      if (isFinal) {
+        setInput(prev => prev + (prev ? ' ' : '') + text);
+      } else {
+        // Show partial transcription in real-time
+        setInput(prev => {
+          const lastSpace = prev.lastIndexOf(' ');
+          const base = lastSpace > 0 ? prev.substring(0, lastSpace + 1) : '';
+          return base + text;
+        });
+      }
+    },
+    onError: (error) => {
+      console.error('Voice input error:', error);
+    }
+  });
 
   // Load or create conversation on mount
   useEffect(() => {
@@ -407,15 +427,11 @@ const ChatInterface = () => {
               />
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0"
-              onClick={() => toast.info("Voice input coming soon!")}
-              disabled={isLoading}
-            >
-              <Mic className="h-5 w-5" />
-            </Button>
+            <VoiceInputButton
+              isRecording={isRecording}
+              isConnecting={isConnecting}
+              onClick={toggleRecording}
+            />
 
             {isLoading ? (
               <Button
