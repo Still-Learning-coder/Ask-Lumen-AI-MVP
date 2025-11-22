@@ -63,18 +63,29 @@ serve(async (req) => {
     if (isImageRequest) {
       console.log('Image generation request detected - calling generate-image function');
       
-      // Extract the prompt by removing the command keywords
-      const actionWords = ['generate', 'create', 'make', 'draw', 'show', 'produce'];
-      const objectWords = ['image', 'picture', 'photo', 'visual', 'illustration', 'artwork', 'an', 'a', 'the', 'me'];
-      
+      // Extract the prompt more carefully - keep the meaningful parts
       let imagePrompt = lastUserMessage.content;
-      [...actionWords, ...objectWords].forEach(keyword => {
-        imagePrompt = imagePrompt.replace(new RegExp(`\\b${keyword}\\b`, 'gi'), '');
-      });
-      imagePrompt = imagePrompt.replace(/\s+/g, ' ').trim();
-
-      if (!imagePrompt || imagePrompt.length < 3) {
-        imagePrompt = lastUserMessage.content; // Use full content if extraction fails
+      
+      // Remove only the obvious command phrases, keep everything else
+      const commandPhrases = [
+        /^(can you |could you |please |would you )?generate (an? |the )?(image|picture|photo)/i,
+        /^(can you |could you |please |would you )?create (an? |the )?(image|picture|photo)/i,
+        /^(can you |could you |please |would you )?make (an? |the )?(image|picture|photo)/i,
+        /^(can you |could you |please |would you )?draw (an? |the )?(image|picture|photo)?/i,
+        /^(can you |could you |please |would you )?show me (an? |the )?(image|picture|photo)/i,
+        /^i want to see (an? |the )?(image|picture|photo)/i
+      ];
+      
+      for (const pattern of commandPhrases) {
+        imagePrompt = imagePrompt.replace(pattern, '');
+      }
+      
+      // Clean up extra whitespace and common connecting words at the start
+      imagePrompt = imagePrompt.replace(/^(of |for |about |showing )*/i, '').trim();
+      
+      // If the prompt is too short or empty, use the full original message
+      if (!imagePrompt || imagePrompt.length < 5) {
+        imagePrompt = lastUserMessage.content;
       }
       
       console.log('Extracted image prompt:', imagePrompt);
@@ -128,7 +139,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are Lumen AI, an intelligent and helpful AI assistant with image generation capabilities. When greeting users, introduce yourself as 'I'm Lumen AI' or 'This is Lumen AI'. You can help with a wide range of tasks including answering questions, generating content, analyzing information, and providing creative solutions. Be concise, accurate, and friendly in your responses.",
+            content: "You are an intelligent and helpful AI assistant with image generation capabilities. You can help with a wide range of tasks including answering questions, generating content, analyzing information, and providing creative solutions. Be concise, accurate, and friendly in your responses. Do not introduce yourself unless specifically asked who you are.",
           },
           ...messages,
         ],
