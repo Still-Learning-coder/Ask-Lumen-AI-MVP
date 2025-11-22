@@ -21,6 +21,27 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
     toast.success("Image downloaded!");
   };
 
+  const renderMarkdown = (text: string) => {
+    let html = text;
+    
+    // Convert **bold**
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>');
+    
+    // Convert *italic* (but not already in bold)
+    html = html.replace(/(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/g, '<em class="italic">$1</em>');
+    
+    // Convert `code`
+    html = html.replace(/`([^`]+)`/g, '<code class="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">$1</code>');
+    
+    // Convert [text](url) to links
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="underline hover:text-primary transition-colors">$1</a>');
+    
+    // Convert line breaks
+    html = html.replace(/\n/g, '<br/>');
+    
+    return { __html: html };
+  };
+
   return (
     <div className={`flex items-start gap-3 animate-fade-in ${isUser ? "flex-row-reverse" : ""}`}>
       <Avatar className="w-8 h-8 shrink-0">
@@ -44,7 +65,10 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
               : "bg-muted text-foreground"
           }`}
         >
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+          <div 
+            className="text-sm leading-relaxed prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={renderMarkdown(message.content)}
+          />
           
           {message.imageUrl && (
             <div className="mt-3 space-y-2">
