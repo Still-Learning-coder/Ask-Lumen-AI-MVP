@@ -63,10 +63,9 @@ serve(async (req) => {
     if (isImageRequest) {
       console.log('Image generation request detected - calling generate-image function');
       
-      // Extract the prompt more carefully - keep the meaningful parts
       let imagePrompt = lastUserMessage.content;
       
-      // Remove only the obvious command phrases, keep everything else
+      // Remove command phrases
       const commandPhrases = [
         /^(can you |could you |please |would you )?generate (an? |the )?(image|picture|photo)/i,
         /^(can you |could you |please |would you )?create (an? |the )?(image|picture|photo)/i,
@@ -80,15 +79,59 @@ serve(async (req) => {
         imagePrompt = imagePrompt.replace(pattern, '');
       }
       
-      // Clean up extra whitespace and common connecting words at the start
       imagePrompt = imagePrompt.replace(/^(of |for |about |showing )*/i, '').trim();
       
-      // If the prompt is too short or empty, use the full original message
+      // Detect vague/contextual requests (contains pronouns or too short)
+      const pronouns = ['it', 'its', 'that', 'this', 'them', 'those', 'these'];
+      const hasPronouns = pronouns.some(p => imagePrompt.toLowerCase().includes(p));
+      const isVague = !imagePrompt || imagePrompt.length < 10 || hasPronouns;
+      
+      console.log('Initial extracted prompt:', imagePrompt, 'isVague:', isVague);
+      
+      // If vague, use AI to extract context from conversation
+      if (isVague && messages.length > 1) {
+        console.log('Vague request detected, extracting context from conversation history');
+        
+        try {
+          const contextResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                {
+                  role: "system",
+                  content: "Extract what the user wants to visualize from the conversation. Return ONLY a detailed, descriptive image generation prompt (2-3 sentences). Do not include any other text or explanations."
+                },
+                ...messages.slice(-5) // Last 5 messages for context
+              ],
+            }),
+          });
+          
+          if (contextResponse.ok) {
+            const contextData = await contextResponse.json();
+            const extractedPrompt = contextData.choices?.[0]?.message?.content?.trim();
+            
+            if (extractedPrompt && extractedPrompt.length > 10) {
+              imagePrompt = extractedPrompt;
+              console.log('Context-aware prompt extracted:', imagePrompt);
+            }
+          }
+        } catch (error) {
+          console.error('Error extracting context:', error);
+          // Fall back to original prompt
+        }
+      }
+      
+      // Final validation
       if (!imagePrompt || imagePrompt.length < 5) {
         imagePrompt = lastUserMessage.content;
       }
       
-      console.log('Extracted image prompt:', imagePrompt);
+      console.log('Final image prompt:', imagePrompt);
 
       // Call the generate-image function
       const imageResponse = await fetch(`https://jsuqipnblmjayovklhrf.supabase.co/functions/v1/generate-image`, {

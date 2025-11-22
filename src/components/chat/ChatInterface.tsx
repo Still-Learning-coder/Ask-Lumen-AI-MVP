@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Paperclip, Mic, Loader2 } from "lucide-react";
+import { Send, Paperclip, Mic, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import MessageBubble from "./MessageBubble";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface Message {
   id: string;
@@ -22,8 +23,64 @@ const ChatInterface = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Load or create conversation on mount
+  useEffect(() => {
+    initializeConversation();
+  }, []);
+
+  const initializeConversation = async () => {
+    try {
+      // Create a new conversation
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          title: 'New Chat',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      setConversationId(data.id);
+      console.log('Created new conversation:', data.id);
+    } catch (error) {
+      console.error('Error initializing conversation:', error);
+      toast.error('Failed to initialize chat');
+    }
+  };
+
+  const saveMessage = async (message: Message) => {
+    if (!conversationId) return;
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          role: message.role,
+          content: message.content,
+          image_url: message.imageUrl,
+          created_at: message.timestamp.toISOString()
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
+  };
+
+  const handleNewChat = async () => {
+    setMessages([]);
+    setInput("");
+    await initializeConversation();
+    toast.success('Started new conversation');
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -83,13 +140,16 @@ const ChatInterface = () => {
         const data = await response.json();
         
         // Add assistant message with text and image
-        setMessages(prev => [...prev, {
+        const assistantMsg: Message = {
           id: assistantMessageId,
           role: "assistant",
           content: data.content || "Here's your generated image!",
           imageUrl: data.imageUrl,
           timestamp: new Date(),
-        }]);
+        };
+        
+        setMessages(prev => [...prev, assistantMsg]);
+        await saveMessage(assistantMsg);
         
         setIsLoading(false);
         setIsGeneratingImage(false);
@@ -136,11 +196,21 @@ const ChatInterface = () => {
               assistantContent += content;
               
               // Update the assistant message that already exists
-              setMessages(prev => prev.map(m => 
-                m.id === assistantMessageId 
-                  ? { ...m, content: assistantContent }
-                  : m
-              ));
+              setMessages(prev => {
+                const updated = prev.map(m => 
+                  m.id === assistantMessageId 
+                    ? { ...m, content: assistantContent }
+                    : m
+                );
+                
+                // Save the complete message when stream ends
+                const finalMessage = updated.find(m => m.id === assistantMessageId);
+                if (finalMessage && content.includes('.') || content.includes('!')) {
+                  saveMessage(finalMessage);
+                }
+                
+                return updated;
+              });
             }
           } catch (e) {
             // Ignore parse errors for incomplete JSON
@@ -203,6 +273,7 @@ const ChatInterface = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    await saveMessage(userMessage);
     setInput("");
 
     await streamChat(userMessage);
@@ -251,6 +322,17 @@ const ChatInterface = () => {
       <div className="border-t border-border bg-background p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-end gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              onClick={handleNewChat}
+              disabled={isLoading}
+              title="New Chat"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+            
             <Button
               variant="ghost"
               size="icon"
