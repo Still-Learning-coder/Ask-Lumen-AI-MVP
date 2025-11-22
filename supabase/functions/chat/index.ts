@@ -31,22 +31,32 @@ serve(async (req) => {
 
     // Check if the last user message is requesting image generation
     const lastUserMessage = messages[messages.length - 1];
-    const imageKeywords = [
-      'generate image', 'create image', 'generate a image', 'create a image',
-      'draw', 'draw me', 'draw a',
-      'make an image', 'make a picture', 'make me a picture',
-      'generate a picture', 'create a picture',
-      'show me a picture', 'show me an image',
-      'i want to see', 'can you show'
-    ];
     
     console.log('Last user message:', lastUserMessage?.content);
-    const isImageRequest = lastUserMessage?.role === 'user' && 
-      imageKeywords.some(keyword => {
-        const matches = lastUserMessage.content.toLowerCase().includes(keyword);
-        if (matches) console.log(`Matched keyword: "${keyword}"`);
-        return matches;
+    
+    const isImageRequest = lastUserMessage?.role === 'user' && (() => {
+      const content = lastUserMessage.content.toLowerCase();
+      
+      const actionWords = ['generate', 'create', 'make', 'draw', 'show', 'produce'];
+      const objectWords = ['image', 'picture', 'photo', 'visual', 'illustration', 'artwork'];
+      
+      const matchedActions = actionWords.filter(word => content.includes(word));
+      const matchedObjects = objectWords.filter(word => content.includes(word));
+      
+      const hasAction = matchedActions.length > 0;
+      const hasObject = matchedObjects.length > 0;
+      
+      console.log('Detection analysis:', {
+        matchedActions,
+        matchedObjects,
+        hasAction,
+        hasObject,
+        willTriggerImageGen: hasAction && hasObject
       });
+      
+      // Must have both an action word AND an object word
+      return hasAction && hasObject;
+    })();
 
     console.log('Is image request:', isImageRequest);
 
@@ -54,15 +64,20 @@ serve(async (req) => {
       console.log('Image generation request detected - calling generate-image function');
       
       // Extract the prompt by removing the command keywords
+      const actionWords = ['generate', 'create', 'make', 'draw', 'show', 'produce'];
+      const objectWords = ['image', 'picture', 'photo', 'visual', 'illustration', 'artwork', 'an', 'a', 'the', 'me'];
+      
       let imagePrompt = lastUserMessage.content;
-      imageKeywords.forEach(keyword => {
-        imagePrompt = imagePrompt.replace(new RegExp(keyword, 'gi'), '');
+      [...actionWords, ...objectWords].forEach(keyword => {
+        imagePrompt = imagePrompt.replace(new RegExp(`\\b${keyword}\\b`, 'gi'), '');
       });
-      imagePrompt = imagePrompt.trim();
+      imagePrompt = imagePrompt.replace(/\s+/g, ' ').trim();
 
-      if (!imagePrompt) {
+      if (!imagePrompt || imagePrompt.length < 3) {
         imagePrompt = lastUserMessage.content; // Use full content if extraction fails
       }
+      
+      console.log('Extracted image prompt:', imagePrompt);
 
       // Call the generate-image function
       const imageResponse = await fetch(`https://jsuqipnblmjayovklhrf.supabase.co/functions/v1/generate-image`, {
