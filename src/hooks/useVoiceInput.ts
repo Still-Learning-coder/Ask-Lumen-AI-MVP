@@ -32,8 +32,8 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
       // Store stream for cleanup
       streamRef.current = stream;
 
-      // Connect to WebSocket
-      const wsUrl = `wss://jsuqipnblmjayovklhrf.supabase.co/functions/v1/voice-input`;
+      // Connect to WebSocket with anon key for authentication
+      const wsUrl = `wss://jsuqipnblmjayovklhrf.supabase.co/functions/v1/voice-input?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzdXFpcG5ibG1qYXlvdmtsaHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2NTgxMDIsImV4cCI6MjA3OTIzNDEwMn0.hHXgRWEEUCtZLP34feTeJ0yAEzkG7OrDzsoXa4OSAF0`;
       
       wsRef.current = new WebSocket(wsUrl);
 
