@@ -111,19 +111,21 @@ serve(async (req) => {
   };
 
   socket.onmessage = (event) => {
+    // Handle binary audio data
+    if (event.data instanceof ArrayBuffer || event.data instanceof Uint8Array) {
+      if (assemblyWs && assemblyWs.readyState === WebSocket.OPEN) {
+        console.log(`Forwarding binary audio: ${event.data.byteLength} bytes`);
+        assemblyWs.send(event.data); // Forward raw binary PCM16 data
+      } else {
+        console.warn('Cannot send audio: AssemblyAI WebSocket not ready');
+      }
+      return;
+    }
+
+    // Handle text/JSON messages (control messages)
     try {
       const data = JSON.parse(event.data);
       
-      // Forward audio data to AssemblyAI
-      if (data.type === 'audio' && assemblyWs && assemblyWs.readyState === WebSocket.OPEN) {
-        const audioLength = data.audio ? data.audio.length : 0;
-        console.log(`Forwarding audio chunk: ${audioLength} bytes`);
-        assemblyWs.send(JSON.stringify({ audio_data: data.audio }));
-      } else if (data.type === 'audio' && (!assemblyWs || assemblyWs.readyState !== WebSocket.OPEN)) {
-        console.warn('Cannot send audio: AssemblyAI WebSocket not ready');
-      }
-      
-      // Handle terminate request
       if (data.type === 'terminate') {
         console.log('Termination requested');
         if (assemblyWs && assemblyWs.readyState === WebSocket.OPEN) {
@@ -131,7 +133,7 @@ serve(async (req) => {
         }
       }
     } catch (e) {
-      console.error('Error processing client message:', e);
+      console.error('Error processing message:', e);
     }
   };
 

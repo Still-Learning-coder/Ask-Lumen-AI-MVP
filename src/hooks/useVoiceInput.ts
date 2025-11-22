@@ -109,7 +109,7 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
       const processor = audioContext.createScriptProcessor(4096, 1, 1);
       processorRef.current = processor;
 
-      // Convert Float32 audio to Int16 PCM and send as base64
+      // Convert Float32 audio to Int16 PCM and send as raw binary
       processor.onaudioprocess = (e) => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           const inputData = e.inputBuffer.getChannelData(0);
@@ -121,18 +121,8 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
             pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
           }
 
-          // Convert to base64
-          const uint8Array = new Uint8Array(pcm16.buffer);
-          let binary = '';
-          for (let i = 0; i < uint8Array.length; i++) {
-            binary += String.fromCharCode(uint8Array[i]);
-          }
-          const base64Audio = btoa(binary);
-
-          wsRef.current.send(JSON.stringify({
-            type: 'audio',
-            audio: base64Audio
-          }));
+          // Send raw binary PCM16 data directly
+          wsRef.current.send(pcm16.buffer);
         }
       };
 
