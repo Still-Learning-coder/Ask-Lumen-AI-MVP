@@ -13,8 +13,10 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, conversationId, isFirstMessage } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!LOVABLE_API_KEY) {
       console.error("LOVABLE_API_KEY is not configured");
@@ -28,6 +30,63 @@ serve(async (req) => {
     }
 
     console.log("Starting chat request with", messages.length, "messages");
+
+    // Generate conversation title if this is the first message
+    if (isFirstMessage && conversationId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      const lastUserMessage = messages[messages.length - 1];
+      
+      try {
+        console.log('Generating conversation title from first message');
+        
+        const titleResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [{
+              role: "system",
+              content: "Generate a short, concise title (3-5 words max) for this conversation. Return ONLY the title, nothing else. No quotes or punctuation."
+            }, {
+              role: "user",
+              content: lastUserMessage.content
+            }],
+          }),
+        });
+        
+        if (titleResponse.ok) {
+          const titleData = await titleResponse.json();
+          const title = titleData.choices?.[0]?.message?.content?.trim().replace(/['"]/g, '');
+          
+          if (title && title.length > 0 && title.length < 100) {
+            console.log('Generated title:', title);
+            
+            // Update conversation title
+            const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/conversations?id=eq.${conversationId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'Prefer': 'return=minimal'
+              },
+              body: JSON.stringify({ title })
+            });
+            
+            if (!updateResponse.ok) {
+              console.error('Failed to update conversation title:', await updateResponse.text());
+            } else {
+              console.log('Successfully updated conversation title');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error generating conversation title:', error);
+        // Don't fail the request if title generation fails
+      }
+    }
 
     // Check if the last user message is requesting image generation
     const lastUserMessage = messages[messages.length - 1];
