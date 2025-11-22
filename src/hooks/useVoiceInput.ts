@@ -11,7 +11,8 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
   const [isConnecting, setIsConnecting] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   const connect = useCallback(async () => {
@@ -100,35 +101,44 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
         // Don't call disconnect() here to avoid recursive cleanup
       };
 
-      // Create MediaRecorder with WebM/Opus format
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 16000
-      });
+      // Create AudioContext with 16kHz sample rate for PCM16 audio
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      audioContextRef.current = audioContext;
 
-      mediaRecorderRef.current = mediaRecorder;
+      const source = audioContext.createMediaStreamSource(stream);
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      processorRef.current = processor;
 
-      // Handle audio data chunks
-      mediaRecorder.ondataavailable = async (event) => {
-        if (event.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64Audio = (reader.result as string)?.split(',')[1];
-            if (base64Audio) {
-              console.log(`Sending audio chunk: ${base64Audio.length} bytes`);
-              wsRef.current?.send(JSON.stringify({
-                type: 'audio',
-                audio: base64Audio
-              }));
-            }
-          };
-          reader.readAsDataURL(event.data);
+      // Convert Float32 audio to Int16 PCM and send as base64
+      processor.onaudioprocess = (e) => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          const inputData = e.inputBuffer.getChannelData(0);
+          const pcm16 = new Int16Array(inputData.length);
+          
+          // Convert Float32 (-1.0 to 1.0) to Int16 (-32768 to 32767)
+          for (let i = 0; i < inputData.length; i++) {
+            const s = Math.max(-1, Math.min(1, inputData[i]));
+            pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+
+          // Convert to base64
+          const uint8Array = new Uint8Array(pcm16.buffer);
+          let binary = '';
+          for (let i = 0; i < uint8Array.length; i++) {
+            binary += String.fromCharCode(uint8Array[i]);
+          }
+          const base64Audio = btoa(binary);
+
+          wsRef.current.send(JSON.stringify({
+            type: 'audio',
+            audio: base64Audio
+          }));
         }
       };
 
-      // Start recording with 250ms chunks
-      mediaRecorder.start(250);
-      console.log('MediaRecorder started');
+      source.connect(processor);
+      processor.connect(audioContext.destination);
+      console.log('Web Audio API started with PCM16 encoding');
 
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -150,10 +160,15 @@ export const useVoiceInput = ({ onTranscript, onError }: UseVoiceInputProps) => 
       wsRef.current.send(JSON.stringify({ type: 'terminate' }));
     }
 
-    // Stop MediaRecorder
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current = null;
+    // Stop Web Audio API
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
+    
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
     }
 
     // Stop all media tracks
