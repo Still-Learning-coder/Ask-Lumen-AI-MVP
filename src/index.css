@@ -47,53 +47,65 @@ All colors MUST be HSL.
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 193 100% 42%;
 
-    /* Custom design tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(193, 100%, 42%), hsl(193, 100%, 52%));
-    --gradient-secondary: linear-gradient(135deg, hsl(39, 100%, 50%), hsl(39, 100%, 60%));
-    --gradient-hero: linear-gradient(135deg, hsl(193, 100%, 42%), hsl(39, 100%, 50%));
-    --glow-primary: 0 0 20px hsla(193, 100%, 42%, 0.5);
-    --glow-secondary: 0 0 20px hsla(39, 100%, 50%, 0.5);
-    --shadow-elegant: 0 10px 30px -10px hsla(193, 100%, 42%, 0.3);
+    /* Sci-Fi Design Tokens */
+    --neon-cyan: 180 100% 50%;
+    --neon-blue: 217 91% 60%;
+    --neon-purple: 271 91% 65%;
+    --neon-pink: 330 100% 70%;
+    --holographic: linear-gradient(135deg, hsl(180, 100%, 50%), hsl(217, 91%, 60%), hsl(271, 91%, 65%));
+    
+    --gradient-primary: linear-gradient(135deg, hsl(180, 100%, 50%), hsl(217, 91%, 60%));
+    --gradient-secondary: linear-gradient(135deg, hsl(271, 91%, 65%), hsl(330, 100%, 70%));
+    --gradient-hero: linear-gradient(135deg, hsl(180, 100%, 50%), hsl(271, 91%, 65%), hsl(330, 100%, 70%));
+    --gradient-holographic: linear-gradient(45deg, hsl(180, 100%, 50%), hsl(217, 91%, 60%), hsl(271, 91%, 65%), hsl(330, 100%, 70%));
+    
+    --glow-cyan: 0 0 30px hsla(180, 100%, 50%, 0.7), 0 0 60px hsla(180, 100%, 50%, 0.4);
+    --glow-blue: 0 0 30px hsla(217, 91%, 60%, 0.7), 0 0 60px hsla(217, 91%, 60%, 0.4);
+    --glow-purple: 0 0 30px hsla(271, 91%, 65%, 0.7), 0 0 60px hsla(271, 91%, 65%, 0.4);
+    --glow-holographic: 0 0 40px hsla(180, 100%, 50%, 0.5), 0 0 80px hsla(217, 91%, 60%, 0.3), 0 0 120px hsla(271, 91%, 65%, 0.2);
+    
+    --shadow-3d: 0 20px 60px -15px hsla(180, 100%, 50%, 0.4), 0 0 40px hsla(217, 91%, 60%, 0.3);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
 
   .dark {
-    --background: 240 4% 4%;
-    --foreground: 0 0% 98%;
+    --background: 220 20% 4%;
+    --foreground: 180 100% 95%;
 
-    --card: 240 5% 8%;
-    --card-foreground: 0 0% 98%;
+    --card: 220 20% 8%;
+    --card-foreground: 180 100% 95%;
 
-    --popover: 240 5% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 220 20% 8%;
+    --popover-foreground: 180 100% 95%;
 
-    --primary: 193 100% 42%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 180 100% 50%;
+    --primary-foreground: 220 20% 4%;
 
-    --secondary: 39 100% 50%;
+    --secondary: 271 91% 65%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 5% 15%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 20% 12%;
+    --muted-foreground: 180 50% 70%;
 
-    --accent: 193 100% 42%;
+    --accent: 217 91% 60%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 5% 15%;
-    --input: 240 5% 15%;
-    --ring: 193 100% 42%;
+    --border: 220 20% 18%;
+    --input: 220 20% 15%;
+    --ring: 180 100% 50%;
 
-    --sidebar-background: 240 5% 6%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 193 100% 42%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 5% 12%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 5% 15%;
-    --sidebar-ring: 193 100% 42%;
+    --sidebar-background: 220 20% 6%;
+    --sidebar-foreground: 180 100% 90%;
+    --sidebar-primary: 180 100% 50%;
+    --sidebar-primary-foreground: 220 20% 4%;
+    --sidebar-accent: 220 20% 12%;
+    --sidebar-accent-foreground: 180 100% 90%;
+    --sidebar-border: 220 20% 18%;
+    --sidebar-ring: 180 100% 50%;
   }
 }
 
@@ -109,14 +121,24 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  .glow-primary {
-    box-shadow: var(--glow-primary);
+  /* Sci-Fi Glow Effects */
+  .glow-cyan {
+    box-shadow: var(--glow-cyan);
   }
   
-  .glow-secondary {
-    box-shadow: var(--glow-secondary);
+  .glow-blue {
+    box-shadow: var(--glow-blue);
   }
 
+  .glow-purple {
+    box-shadow: var(--glow-purple);
+  }
+
+  .glow-holographic {
+    box-shadow: var(--glow-holographic);
+  }
+
+  /* Gradients */
   .gradient-primary {
     background: var(--gradient-primary);
   }
@@ -129,6 +151,17 @@ All colors MUST be HSL.
     background: var(--gradient-hero);
   }
 
+  .gradient-holographic {
+    background: var(--gradient-holographic);
+    background-size: 200% 200%;
+  }
+
+  /* 3D Shadow */
+  .shadow-3d {
+    box-shadow: var(--shadow-3d);
+  }
+
+  /* Animations */
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
@@ -138,13 +171,21 @@ All colors MUST be HSL.
   }
 
   .animate-gradient {
-    background-size: 200% auto;
+    background-size: 200% 200%;
     animation: gradient 3s ease infinite;
   }
 
+  .animate-holographic {
+    animation: holographic 4s ease-in-out infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
   @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
+    0%, 100% { transform: translateY(0px) translateZ(0); }
+    50% { transform: translateY(-20px) translateZ(10px); }
   }
 
   @keyframes glow {
@@ -155,6 +196,26 @@ All colors MUST be HSL.
   @keyframes gradient {
     0%, 100% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
+  }
+
+  @keyframes holographic {
+    0%, 100% { 
+      background-position: 0% 50%;
+      filter: hue-rotate(0deg);
+    }
+    50% { 
+      background-position: 100% 50%;
+      filter: hue-rotate(45deg);
+    }
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { 
+      box-shadow: 0 0 20px hsla(180, 100%, 50%, 0.5), 0 0 40px hsla(180, 100%, 50%, 0.3);
+    }
+    50% { 
+      box-shadow: 0 0 40px hsla(180, 100%, 50%, 0.8), 0 0 80px hsla(180, 100%, 50%, 0.5);
+    }
   }
 
   .typing-indicator span {
@@ -172,5 +233,19 @@ All colors MUST be HSL.
   @keyframes typing {
     0%, 60%, 100% { opacity: 0.3; }
     30% { opacity: 1; }
+  }
+
+  /* Glass Morphism */
+  .glass-panel {
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(0, 255, 255, 0.2);
+  }
+
+  /* Holographic Border */
+  .border-holographic {
+    border: 2px solid transparent;
+    background: linear-gradient(var(--background), var(--background)) padding-box,
+                var(--gradient-holographic) border-box;
   }
 }
