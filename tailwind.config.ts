@@ -87,6 +87,22 @@ export default {
         "shimmer": {
           "0%": { backgroundPosition: "-1000px 0" },
           "100%": { backgroundPosition: "1000px 0" }
+        },
+        "rotate-3d": {
+          "0%": { transform: "rotateY(0deg) rotateX(0deg)" },
+          "100%": { transform: "rotateY(360deg) rotateX(360deg)" }
+        },
+        "float-3d": {
+          "0%, 100%": { transform: "translateY(0) translateZ(0)" },
+          "50%": { transform: "translateY(-20px) translateZ(50px)" }
+        },
+        "pulse-ring": {
+          "0%": { transform: "scale(0.8)", opacity: "1" },
+          "100%": { transform: "scale(2)", opacity: "0" }
+        },
+        "scan-line": {
+          "0%": { transform: "translateY(-100%)" },
+          "100%": { transform: "translateY(100vh)" }
         }
       },
       animation: {
@@ -95,7 +111,11 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-in": "slide-in 0.3s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
-        "shimmer": "shimmer 2s infinite"
+        "shimmer": "shimmer 2s infinite",
+        "rotate-3d": "rotate-3d 20s linear infinite",
+        "float-3d": "float-3d 6s ease-in-out infinite",
+        "pulse-ring": "pulse-ring 2s ease-out infinite",
+        "scan-line": "scan-line 8s linear infinite"
       },
     },
   },
